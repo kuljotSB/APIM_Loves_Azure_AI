@@ -1,0 +1,89 @@
+<policies>
+    <inbound>
+        <base />
+        <!-- Set the backend to Content Safety endpoint -->
+        <set-backend-service base-url="https://<Name-of-content-safety-resource>.cognitiveservices.azure.com/" />
+        <send-request mode="new" response-variable-name="safetyResponse">
+            <set-url>https://<Name-of-content-safety-resource>.cognitiveservices.azure.com/contentsafety/text:analyze?api-version=2024-09-01</set-url>
+            <set-method>POST</set-method>
+            <set-header name="Ocp-Apim-Subscription-Key" exists-action="override">
+                <value>{{YOUR_SUBSCRIPTION_KEY_GOES_HERE}}</value>
+            </set-header>
+            <set-header name="Content-Type" exists-action="override">
+                <value>application/json</value>
+            </set-header>
+            <set-body>@{
+                // Concatenate all user message content
+                var messages = context.Request.Body.As<JObject>(preserveContent: true)["messages"];
+                var text = string.Join(" ", messages.Select(m => (string)m["content"]));
+                var categories = new JArray("Hate", "Sexual", "SelfHarm", "Violence");
+                var obj = new JObject
+                {
+                    ["text"] = text,
+                    ["categories"] = categories,
+                    ["outputType"] = "FourSeverityLevels"
+                };
+                return obj.ToString();
+            }</set-body>
+        </send-request>
+        <choose>
+            <when condition="@(((IResponse)context.Variables["safetyResponse"]).StatusCode == 200)">
+                <set-variable name="thresholdExceededCategory" value="@{
+                    var thresholdExceededCategory = "";
+                    // Define the allowed threshold for each category
+                    var categoryThresholds = new Dictionary<string, int>
+                    {
+                        { "Hate", 2 },
+                        { "Sexual", 2 },
+                        { "SelfHarm", 2 },
+                        { "Violence", 2 }
+                    };
+                    var analysis = ((JArray)((IResponse)context.Variables["safetyResponse"]).Body.As<JObject>(preserveContent: true)["categoriesAnalysis"]);
+                    foreach (var category in categoryThresholds)
+                    {
+                        var cat = analysis.FirstOrDefault(c => (string)c["category"] == category.Key);
+                        if (cat != null && (int)cat["severity"] > category.Value)
+                        {
+                            thresholdExceededCategory = category.Key;
+                            break;
+                        }
+                    }
+                    return thresholdExceededCategory;
+                }" />
+                <choose>
+                    <when condition="@(context.Variables["thresholdExceededCategory"] != "")">
+                        <return-response>
+                            <set-status code="400" reason="Bad Request" />
+                            <set-body>@{
+                                var errorResponse = new JObject
+                                {
+                                    ["error"] = new JObject
+                                    {
+                                        ["message"] = "The content was filtered by the Azure AI Content Safety service for the category: " + (string)context.Variables["thresholdExceededCategory"]
+                                    }
+                                };
+                                return errorResponse.ToString();
+                            }</set-body>
+                        </return-response>
+                    </when>
+                </choose>
+            </when>
+            <otherwise>
+                <return-response>
+                    <set-status code="500" reason="Internal Server Error" />
+                </return-response>
+            </otherwise>
+        </choose>
+        <!-- If not blocked, request continues to backend (LLM) as normal -->
+        <set-backend-service backend-id="<YOUR_APIM_BACKEND_SERVICE_GOES_HERE" />
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>
