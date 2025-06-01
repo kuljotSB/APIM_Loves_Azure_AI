@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1
+FROM python:3.11.5-slim
+
+WORKDIR /
+
+COPY ./flow/requirements.txt /flow/requirements.txt
+
+# gcc is for build psutil in MacOS
+RUN apt-get update && apt-get install -y runit gcc
+
+# install python dependencies
+RUN pip install --upgrade pip==23.0.1 && \
+    pip install -r /flow/requirements.txt && \
+    pip install promptflow && \
+    pip install keyrings.alt && \
+    pip install gunicorn==22.0.0 && \
+    pip install 'uvicorn>=0.27.0,<1.0.0'
+    
+
+COPY ./flow /flow
+
+EXPOSE 8080
+
+COPY ./connections /connections
+
+# reset runsvdir
+RUN rm -rf /var/runit
+COPY ./runit /var/runit
+# grant permission
+RUN chmod -R +x /var/runit
+
+COPY ./start.sh /
+CMD ["bash", "./start.sh"]
