@@ -74,7 +74,7 @@ pf flow build --source <path-to-your-flow-folder> --output <your-output-dir> --f
 
 Start Docker Desktop to initiate the Docker Daemon in the back-running process and execute the following command:
 ```
-docker build <PATH-TO-YOUR-FOLDER-CONTAINING-DOCKER-FILE> -t web-classification-serve 
+docker build <PATH-TO-YOUR-FOLDER-CONTAINING-DOCKER-FILE> -t chat-with-wikipedia-serve
 ```
 
 ---
