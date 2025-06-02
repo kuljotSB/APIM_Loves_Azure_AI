@@ -1,5 +1,6 @@
 ## Developing and Deploying a Prompt Flow to Azure Container Instance
 
+![prompt-flow-with-ACI](./Assets/Prompt_Flow_to_ACI_deployment.svg)
 ### Prompt Flow CLI Installation
 
 Install using `winget`
