@@ -41,7 +41,7 @@ az containerapp create \
     --ingress external \
     --registry-server $ACR_NAME.azurecr.io \
     --registry-identity system \
-    --system-assigned \
+    --system-assigned 
 ```
 
 ### Verifying the Deployment
