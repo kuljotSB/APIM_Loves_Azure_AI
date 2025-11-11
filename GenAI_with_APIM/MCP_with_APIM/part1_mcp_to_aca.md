@@ -20,7 +20,7 @@ The MCP server is built using a Dockerfile located in the `server` directory. Na
 cd server
 
 # build the Docker image
-docker build -t $ACR_NAME/udemy-demo-mcp-server:latest .
+docker build -t $ACR_NAME.azurecr.io/udemy-demo-mcp-server:latest .
 
 # Log in to Azure Container Registry
 az acr login --name $ACR_NAME
